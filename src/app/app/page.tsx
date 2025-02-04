@@ -14,10 +14,8 @@ export default async function MainPage() {
       <section className="p-6">
         <h1 className="flex items-baseline gap-2 text-lg">
           <CircleUserRound />
-          <span className="flex gap-2">
-            Bonjour
-            <span className="font-semibold">{user.name}</span>
-          </span>
+          <span className="flex gap-2 text-gray-700">Bonjour</span>
+          <span className="font-semibold">{user.name}</span>
         </h1>
       </section>
 

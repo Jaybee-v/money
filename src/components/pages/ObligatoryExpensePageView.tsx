@@ -84,13 +84,13 @@ export const ObligatoryExpensePageView = ({
     if (response.success) {
       console.log(response.success);
 
-      // const reload = await getObligatoryExpenses(user.id);
-      // if (reload.error) {
-      //   console.error(reload.error);
-      // }
-      // if (reload.obligatoryExpenses) {
-      //   setObligatoryExpenses(reload.obligatoryExpenses);
-      // }
+      const reload = await getObligatoryExpenses(user.id);
+      if (reload.error) {
+        console.error(reload.error);
+      }
+      if (reload.obligatoryExpenses) {
+        setObligatoryExpenses(reload.obligatoryExpenses);
+      }
     }
   };
 
@@ -99,28 +99,29 @@ export const ObligatoryExpensePageView = ({
       <h1 className="text-2xl font-bold text-center">
         Gérez vos prélèvements récurrents
       </h1>
-      <section className="mt-4 w-full max-w-4xl mx-auto space-y-4">
-        {obligatoryExpenses.length > 0 ? (
-          <ObligatoryExpenseTable
-            obligatoryExpenses={obligatoryExpenses}
-            onDelete={onDelete}
-            onArchive={onArchive}
-          />
-        ) : (
-          <p className="text-center text-sm text-muted-foreground my-12">
-            Aucun prélèvement récurrent renseigné
-          </p>
-        )}
+      <section className="flex max-md:flex-col justify-evenly">
+        <Card className="max-w-sm mx-auto">
+          <CardHeader>
+            <CardTitle>Ajouter un prélèvement récurrent</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ObligatoryExpenseForm userId={user.id} onSubmit={onSubmit} />
+          </CardContent>
+        </Card>
+        <section className="mt-4 w-full max-w-4xl mx-auto space-y-4">
+          {obligatoryExpenses.length > 0 ? (
+            <ObligatoryExpenseTable
+              obligatoryExpenses={obligatoryExpenses}
+              onDelete={onDelete}
+              onArchive={onArchive}
+            />
+          ) : (
+            <p className="text-center text-sm text-muted-foreground my-12">
+              Aucun prélèvement récurrent renseigné
+            </p>
+          )}
+        </section>
       </section>
-
-      <Card className="max-w-sm mx-auto">
-        <CardHeader>
-          <CardTitle>Ajouter un prélèvement récurrent</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ObligatoryExpenseForm userId={user.id} onSubmit={onSubmit} />
-        </CardContent>
-      </Card>
     </div>
   );
 };

@@ -87,43 +87,6 @@ export const RecipePageView = ({ userId }: RecipePageViewProps) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Historique des recettes</h2>
-        <div className="flex gap-2">
-          <Select
-            value={selectedYear.toString()}
-            onValueChange={(value) => setSelectedYear(Number(value))}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year.value} value={year.value.toString()}>
-                  {year.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={selectedMonth.toString()}
-            onValueChange={(value) => setSelectedMonth(Number(value))}
-          >
-            <SelectTrigger className="w-[160px] capitalize">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month) => (
-                <SelectItem
-                  key={month.value}
-                  value={month.value.toString()}
-                  className="capitalize"
-                >
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <section>
@@ -145,7 +108,43 @@ export const RecipePageView = ({ userId }: RecipePageViewProps) => {
           </DialogContent>
         </Dialog>
       </section>
+      <div className="flex gap-2">
+        <Select
+          value={selectedYear.toString()}
+          onValueChange={(value) => setSelectedYear(Number(value))}
+        >
+          <SelectTrigger className="w-[120px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((year) => (
+              <SelectItem key={year.value} value={year.value.toString()}>
+                {year.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
+        <Select
+          value={selectedMonth.toString()}
+          onValueChange={(value) => setSelectedMonth(Number(value))}
+        >
+          <SelectTrigger className="w-[160px] capitalize">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((month) => (
+              <SelectItem
+                key={month.value}
+                value={month.value.toString()}
+                className="capitalize"
+              >
+                {month.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {recipes.length > 0 ? (
         <RecipesTable recipes={recipes} />
       ) : (

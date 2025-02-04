@@ -1,6 +1,4 @@
-import { SigninForm } from "@/components/forms/SigninForm";
-import { SignupForm } from "@/components/forms/SignupForm";
-import { Separator } from "@/components/ui/separator";
+import LandingPage from "@/components/pages/LandingPage";
 import { getSession } from "@/lib/session";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -31,21 +29,9 @@ export default async function RootLayout({
     return (
       <html lang="fr">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased flex justify-center items-center h-screen w-full p-20`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased flex justify-center items-center h-screen w-full p-6`}
         >
-          <div className="grid md:grid-cols-7 w-full h-full ">
-            <section className="w-full h-full flex flex-col justify-center items-center max-w-sm mx-auto col-span-3">
-              <h2 className="text-2xl font-bold">Se connecter</h2>
-              <SigninForm />
-            </section>
-            <section className="w-full h-full flex justify-center items-center">
-              <Separator orientation="vertical" className="hidden md:block" />
-            </section>
-            <section className="w-full h-full flex flex-col justify-center items-center max-w-sm mx-auto col-span-3">
-              <h2 className="text-2xl font-bold">Créer un compte</h2>
-              <SignupForm />
-            </section>
-          </div>
+          <LandingPage />
         </body>
       </html>
     );

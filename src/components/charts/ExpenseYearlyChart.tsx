@@ -193,7 +193,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Aperçu annuel des dépenses</CardTitle>
+        <CardTitle>Aperçu annuel</CardTitle>
         <Select
           value={selectedYear.toString()}
           onValueChange={(value) => setSelectedYear(Number(value))}

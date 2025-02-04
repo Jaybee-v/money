@@ -115,7 +115,7 @@ export const UpcomingObligatoryExpenses = ({
                 >
                   <div>
                     <p className="font-medium">{expense.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-gray-400">
                       Prévu le {format(targetDate, "d MMMM", { locale: fr })}
                     </p>
                   </div>
