@@ -1,6 +1,9 @@
 "use client";
 
-import { getExpensesByYear } from "@/actions/expense.action";
+import {
+  getCategoriesExpense,
+  getExpensesByYear,
+} from "@/actions/expense.action";
 import { getObligatoryExpenses } from "@/actions/obligatoryExpense.action";
 import { getRecipesByYear } from "@/actions/recipe.action";
 import { ObligatoryExpense, User } from "@prisma/client";
@@ -11,11 +14,13 @@ import {
   Bar,
   BarChart,
   Legend,
+  TooltipProps as RechartsTooltipProps,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { Payload } from "recharts/types/component/DefaultTooltipContent";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
   Select,
@@ -31,14 +36,27 @@ interface ExpenseYearlyChartProps {
 
 interface MonthlyData {
   name: string;
-  expenses: number;
+  expenses: {
+    categorized: { [categoryId: string]: number };
+    uncategorized: number;
+  };
   obligatory: number;
   recipes: number;
   balance: number;
 }
 
+interface CategoryExpense {
+  id: string;
+  name: string;
+}
+
+type TooltipProps = RechartsTooltipProps<number, string>;
+
+type PayloadEntry = Payload<number, string>;
+
 export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
+  const [categories, setCategories] = useState<CategoryExpense[]>([]);
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
@@ -116,6 +134,16 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   };
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      const response = await getCategoriesExpense(user.id);
+      if (response.data) {
+        setCategories(response.data);
+      }
+    };
+    fetchCategories();
+  }, [user.id]);
+
+  useEffect(() => {
     const fetchData = async () => {
       const expensesResponse = await getExpensesByYear({
         userId: user.id,
@@ -137,6 +165,24 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
           const currentDate = new Date(selectedYear, month, 1);
           const nextMonthDate = new Date(selectedYear, month + 1, 0);
 
+          // Calculer les dépenses par catégorie
+          const monthExpenses = expensesResponse.data.filter(
+            (expense) => new Date(expense.date).getMonth() === month
+          );
+
+          const expensesByCategory = monthExpenses.reduce(
+            (acc, expense) => {
+              if (expense.category?.id) {
+                acc.categorized[expense.category.id] =
+                  (acc.categorized[expense.category.id] || 0) + expense.amount;
+              } else {
+                acc.uncategorized += expense.amount;
+              }
+              return acc;
+            },
+            { categorized: {} as { [key: string]: number }, uncategorized: 0 }
+          );
+
           const monthlyObligatory =
             obligatoryResponse.obligatoryExpenses.reduce((sum, expense) => {
               if (
@@ -147,18 +193,22 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               return sum;
             }, 0);
 
-          const monthExpenses =
-            expensesResponse.data.find((item) => item.month === month)?.total ||
-            0;
           const monthRecipes =
             recipesResponse.data.find((item) => item.month === month)?.total ||
             0;
 
-          const totalExpenses = monthExpenses + monthlyObligatory;
+          const totalExpenses =
+            Object.values(expensesByCategory.categorized).reduce(
+              (sum, amount) => sum + amount,
+              0
+            ) + monthlyObligatory;
 
           return {
             name: format(currentDate, "MMM", { locale: fr }),
-            expenses: monthExpenses,
+            expenses: {
+              categorized: expensesByCategory.categorized,
+              uncategorized: expensesByCategory.uncategorized,
+            },
             obligatory: monthlyObligatory,
             recipes: monthRecipes,
             balance: monthRecipes - totalExpenses,
@@ -181,9 +231,16 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   });
 
   const maxAmount = Math.max(
-    ...chartData.map((item) =>
-      Math.max(item.recipes, item.expenses + item.obligatory)
-    ),
+    ...chartData.map((item) => {
+      const totalExpenses =
+        Object.values(item.expenses.categorized).reduce(
+          (sum, amount) => sum + amount,
+          0
+        ) +
+        item.expenses.uncategorized +
+        item.obligatory;
+      return Math.max(item.recipes, totalExpenses);
+    }),
     1
   );
   const yAxisTicks = Array.from({ length: 6 }, (_, i) =>
@@ -232,39 +289,103 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               />
               <Tooltip
                 formatter={(value: number, name: string) => {
-                  const label =
-                    name === "obligatory"
-                      ? "Dépenses obligatoires"
-                      : name === "expenses"
-                      ? "Dépenses variables"
-                      : name === "recipes"
-                      ? "Entrées d'argent"
-                      : "Balance";
-                  return [`${value}€`, label];
+                  if (name === "obligatory")
+                    return [`${value}€`, "Dépenses obligatoires"];
+                  if (name === "recipes")
+                    return [`${value}€`, "Entrées d'argent"];
+                  if (name === "uncategorized")
+                    return [`${value}€`, "Non catégorisées"];
+                  const category = categories.find((cat) => cat.id === name);
+                  return [`${value}€`, category?.name || name];
                 }}
                 cursor={{ fill: "transparent" }}
+                content={(props: TooltipProps) => {
+                  if (!props.active || !props.payload) return null;
+
+                  const formatName = (entry: PayloadEntry) => {
+                    const dataKey = entry.dataKey?.toString() || "";
+                    if (dataKey === "obligatory")
+                      return "Dépenses obligatoires";
+                    if (dataKey === "recipes") return "Entrées d'argent";
+                    if (dataKey === "expenses.uncategorized")
+                      return "Non catégorisées";
+                    const categoryId = dataKey.split(".")[2];
+                    const category = categories.find(
+                      (cat) => cat.id === categoryId
+                    );
+                    return category?.name || entry.name;
+                  };
+
+                  const totalExpenses = props.payload.reduce(
+                    (sum: number, entry: Payload<number, string>) => {
+                      if (
+                        entry.dataKey?.toString().includes("expenses") ||
+                        entry.dataKey === "obligatory"
+                      ) {
+                        return sum + (entry.value || 0);
+                      }
+                      return sum;
+                    },
+                    0
+                  );
+
+                  return (
+                    <div className="bg-white p-2 border rounded-lg shadow-sm">
+                      {props.payload.map(
+                        (entry: PayloadEntry, index: number) => (
+                          <div
+                            key={index}
+                            className="text-xs flex items-center gap-2"
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span>
+                              {formatName(entry)}: {entry.value}€
+                            </span>
+                          </div>
+                        )
+                      )}
+                      <div className="border-t mt-1 pt-1 text-xs font-semibold">
+                        Total dépenses: {totalExpenses}€
+                      </div>
+                    </div>
+                  );
+                }}
               />
               <Legend
                 formatter={(value) => {
-                  return value === "obligatory"
-                    ? "Dépenses obligatoires"
-                    : value === "expenses"
-                    ? "Dépenses variables"
-                    : value === "recipes"
-                    ? "Entrées d'argent"
-                    : "Balance";
+                  if (value === "obligatory") return "Dépenses obligatoires";
+                  if (value === "recipes") return "Entrées d'argent";
+                  if (value === "uncategorized") return "Non catégorisées";
+                  const category = categories.find((cat) => cat.id === value);
+                  return category?.name || value;
                 }}
+                wrapperStyle={{ fontSize: "10px" }}
+              />
+              {/* Dépenses par catégorie */}
+              {categories.map((category, index) => (
+                <Bar
+                  key={category.id}
+                  dataKey={`expenses.categorized.${category.id}`}
+                  name={category.name}
+                  stackId="expenses"
+                  fill={`hsl(${index * 30}, 70%, 50%)`}
+                  radius={[4, 4, 0, 0]}
+                />
+              ))}
+              <Bar
+                dataKey="expenses.uncategorized"
+                name="uncategorized"
+                stackId="expenses"
+                fill="#94a3b8"
+                radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="obligatory"
                 stackId="expenses"
                 fill="#fbbf24"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="expenses"
-                stackId="expenses"
-                fill="#06b6d4"
                 radius={[4, 4, 0, 0]}
               />
               <Bar dataKey="recipes" fill="#22c55e" radius={[4, 4, 0, 0]} />

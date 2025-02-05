@@ -3,4 +3,5 @@ export type CreateExpenseDto = {
   amount: number;
   userId: string;
   date: Date;
+  categoryId: string | null;
 };

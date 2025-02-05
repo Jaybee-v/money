@@ -75,9 +75,12 @@ export const ExpensePageView = ({ user }: ExpensePageViewProps) => {
       amount: Number(data.amount),
       userId: data.userId,
       date: new Date(data.date),
+      categoryId: data.categoryId,
     };
+    console.log(createExpenseDto);
 
     const response = await createExpense(createExpenseDto);
+    console.log(response);
     if (response.success) {
       setExpenses((prev) => [...prev, response.data]);
     }

@@ -57,6 +57,8 @@ model Expense {
   userId    String
   name      String
   amount    Int
+  categoryId String?
+  category CategoryExpense? @relation(fields: [categoryId], references: [id])
   date      DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -70,7 +72,29 @@ model Recipe {
   name      String
   amount    Int
   date      DateTime
+  categoryId String?
+  category CategoryRecipe? @relation(fields: [categoryId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CategoryExpense {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses Expense[]
+}
+
+model CategoryRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipes Recipe[]
 }
 
