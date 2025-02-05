@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { ExpenseFormSchema } from "@/lib/definitions/expense.definition";
 import { CreateExpenseDto } from "@/lib/dtos/CreateExpenseDto";
-import { Expense, User } from "@prisma/client";
+import { CategoryExpense, Expense, User } from "@prisma/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEffect, useState } from "react";
@@ -32,7 +32,9 @@ interface ExpensePageViewProps {
 }
 
 export const ExpensePageView = ({ user }: ExpensePageViewProps) => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<
+    (Expense & { category: CategoryExpense | null })[]
+  >([]);
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth());

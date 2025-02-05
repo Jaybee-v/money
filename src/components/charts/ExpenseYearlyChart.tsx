@@ -372,7 +372,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
                   name={category.name}
                   stackId="expenses"
                   fill={`hsl(${index * 30}, 70%, 50%)`}
-                  radius={[4, 4, 0, 0]}
+                  radius={[0, 0, 0, 0]}
                 />
               ))}
               <Bar
@@ -380,13 +380,13 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
                 name="uncategorized"
                 stackId="expenses"
                 fill="#94a3b8"
-                radius={[4, 4, 0, 0]}
+                radius={[0, 0, 0, 0]}
               />
               <Bar
                 dataKey="obligatory"
                 stackId="expenses"
                 fill="#fbbf24"
-                radius={[4, 4, 0, 0]}
+                radius={[0, 0, 0, 0]}
               />
               <Bar dataKey="recipes" fill="#22c55e" radius={[4, 4, 0, 0]} />
             </BarChart>

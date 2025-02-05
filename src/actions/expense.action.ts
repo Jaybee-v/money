@@ -8,6 +8,9 @@ export const createExpense = async (expense: CreateExpenseDto) => {
   console.log(expense);
   const _expense = await prisma.expense.create({
     data: expense,
+    include: {
+      category: true,
+    },
   });
 
   if (!_expense) {
