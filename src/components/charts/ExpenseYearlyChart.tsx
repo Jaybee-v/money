@@ -1,9 +1,13 @@
 "use client";
 
-import { getExpensesByYear } from "@/actions/expense.action";
+import {
+  getCategoriesExpense,
+  getExpensesByYear,
+} from "@/actions/expense.action";
 import { getObligatoryExpenses } from "@/actions/obligatoryExpense.action";
+import { getObligatoryRecipes } from "@/actions/obligatoryRecipe.action";
 import { getRecipesByYear } from "@/actions/recipe.action";
-import { ObligatoryExpense, User } from "@prisma/client";
+import { ObligatoryExpense, ObligatoryRecipe, User } from "@prisma/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEffect, useState } from "react";
@@ -11,11 +15,13 @@ import {
   Bar,
   BarChart,
   Legend,
+  TooltipProps as RechartsTooltipProps,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
+import { Payload } from "recharts/types/component/DefaultTooltipContent";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
   Select,
@@ -31,137 +37,170 @@ interface ExpenseYearlyChartProps {
 
 interface MonthlyData {
   name: string;
-  expenses: number;
+  expenses: {
+    categorized: { [categoryId: string]: number };
+    uncategorized: number;
+  };
   obligatory: number;
   recipes: number;
+  obligatoryRecipes: number;
   balance: number;
 }
 
+interface CategoryExpense {
+  id: string;
+  name: string;
+}
+
+type TooltipProps = RechartsTooltipProps<number, string>;
+
+type PayloadEntry = Payload<number, string>;
+
 export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   const [chartData, setChartData] = useState<MonthlyData[]>([]);
+  const [categories, setCategories] = useState<CategoryExpense[]>([]);
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
   const isExpenseActiveForMonth = (
-    expense: ObligatoryExpense,
-    currentDate: Date,
-    nextMonthDate: Date
+    item: ObligatoryExpense | ObligatoryRecipe,
+    currentDate: Date
   ) => {
-    const startDate = new Date(expense.startDate);
     const today = new Date();
+    const isRecipe = "date" in item;
+    const itemDate = new Date(isRecipe ? item.date : item.startDate);
+    const itemMonth = new Date(itemDate.getFullYear(), itemDate.getMonth(), 1);
 
-    // Si la date de début n'est pas encore atteinte
-    if (startDate > nextMonthDate) {
-      return false;
-    }
-
-    // Si la dépense est archivée et que nous sommes après la date d'archivage
+    // Si l'item est archivé
     if (
-      expense.isArchived &&
-      expense.archivedAt &&
-      currentDate >= new Date(expense.archivedAt)
+      item.isArchived &&
+      item.archivedAt &&
+      currentDate >= new Date(item.archivedAt)
     ) {
       return false;
     }
 
-    // Calculer le nombre de mois depuis le début
-    const monthsSinceStart =
-      (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
-      (currentDate.getMonth() - startDate.getMonth());
+    // Ne pas afficher si le mois est avant la date de début ou après le mois en cours
+    if (
+      currentDate < itemMonth ||
+      currentDate > new Date(today.getFullYear(), today.getMonth(), 1)
+    ) {
+      return false;
+    }
 
-    // Si on est dans le même mois et la même année
+    const monthsSinceStart =
+      (currentDate.getFullYear() - itemDate.getFullYear()) * 12 +
+      (currentDate.getMonth() - itemDate.getMonth());
+
+    // Si on est dans le mois en cours
     if (
       currentDate.getMonth() === today.getMonth() &&
       currentDate.getFullYear() === today.getFullYear()
     ) {
-      // Vérifier si on a dépassé le jour du prélèvement ET si la récurrence correspond
-      if (today.getDate() >= startDate.getDate()) {
-        switch (expense.recurrence) {
-          case "MONTHLY":
-            return true;
-          case "BIMONTHLY":
-            return monthsSinceStart % 2 === 0;
-          case "QUARTERLY":
-            return monthsSinceStart % 3 === 0;
-          case "BIANNUAL":
-            return monthsSinceStart % 6 === 0;
-          case "ANNUAL":
-            return monthsSinceStart % 12 === 0;
-          default:
-            return false;
-        }
-      }
-      return false;
+      if (today.getDate() < itemDate.getDate()) return false;
     }
 
-    // Pour les mois passés, afficher si le mois correspond à la récurrence
-    if (currentDate < today) {
-      switch (expense.recurrence) {
-        case "MONTHLY":
-          return true;
-        case "BIMONTHLY":
-          return monthsSinceStart % 2 === 0;
-        case "QUARTERLY":
-          return monthsSinceStart % 3 === 0;
-        case "BIANNUAL":
-          return monthsSinceStart % 6 === 0;
-        case "ANNUAL":
-          return monthsSinceStart % 12 === 0;
-        default:
-          return false;
-      }
-    }
-
-    return false;
+    return (
+      item.recurrence === "MONTHLY" ||
+      (item.recurrence === "BIMONTHLY" && monthsSinceStart % 2 === 0) ||
+      (item.recurrence === "QUARTERLY" && monthsSinceStart % 3 === 0) ||
+      (item.recurrence === "BIANNUAL" && monthsSinceStart % 6 === 0) ||
+      (item.recurrence === "ANNUAL" && monthsSinceStart % 12 === 0)
+    );
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      const expensesResponse = await getExpensesByYear({
-        userId: user.id,
-        year: selectedYear,
-      });
+    const fetchCategories = async () => {
+      const response = await getCategoriesExpense(user.id);
+      if (response.data) {
+        setCategories(response.data);
+      }
+    };
+    fetchCategories();
+  }, [user.id]);
 
-      const obligatoryResponse = await getObligatoryExpenses(user.id);
-      const recipesResponse = await getRecipesByYear({
-        userId: user.id,
-        year: selectedYear,
-      });
+  useEffect(() => {
+    const fetchData = async () => {
+      const [
+        expensesResponse,
+        obligatoryResponse,
+        recipesResponse,
+        obligatoryRecipesResponse,
+      ] = await Promise.all([
+        getExpensesByYear({ userId: user.id, year: selectedYear }),
+        getObligatoryExpenses(user.id),
+        getRecipesByYear({ userId: user.id, year: selectedYear }),
+        getObligatoryRecipes(user.id),
+      ]);
 
       if (
         expensesResponse.data &&
         obligatoryResponse.obligatoryExpenses &&
-        recipesResponse.data
+        recipesResponse.data &&
+        obligatoryRecipesResponse.obligatoryRecipes
       ) {
         const monthlyData = Array.from({ length: 12 }, (_, month) => {
           const currentDate = new Date(selectedYear, month, 1);
-          const nextMonthDate = new Date(selectedYear, month + 1, 0);
+
+          // Calculer les dépenses par catégorie
+          const monthExpenses = expensesResponse.data.filter(
+            (expense) => new Date(expense.date).getMonth() === month
+          );
+
+          const expensesByCategory = monthExpenses.reduce(
+            (acc, expense) => {
+              if (expense.category?.id) {
+                acc.categorized[expense.category.id] =
+                  (acc.categorized[expense.category.id] || 0) + expense.amount;
+              } else {
+                acc.uncategorized += expense.amount;
+              }
+              return acc;
+            },
+            { categorized: {} as { [key: string]: number }, uncategorized: 0 }
+          );
 
           const monthlyObligatory =
             obligatoryResponse.obligatoryExpenses.reduce((sum, expense) => {
-              if (
-                isExpenseActiveForMonth(expense, currentDate, nextMonthDate)
-              ) {
+              if (isExpenseActiveForMonth(expense, currentDate)) {
                 return sum + expense.amount;
               }
               return sum;
             }, 0);
 
-          const monthExpenses =
-            expensesResponse.data.find((item) => item.month === month)?.total ||
-            0;
+          const monthlyObligatoryRecipes =
+            obligatoryRecipesResponse.obligatoryRecipes.reduce(
+              (sum, recipe) => {
+                if (isExpenseActiveForMonth(recipe, currentDate)) {
+                  return sum + recipe.amount;
+                }
+                return sum;
+              },
+              0
+            );
+
           const monthRecipes =
             recipesResponse.data.find((item) => item.month === month)?.total ||
             0;
 
-          const totalExpenses = monthExpenses + monthlyObligatory;
+          const totalExpenses =
+            Object.values(expensesByCategory.categorized).reduce(
+              (sum, amount) => sum + amount,
+              0
+            ) + monthlyObligatory;
+
+          const totalRecipes = monthRecipes + monthlyObligatoryRecipes;
 
           return {
             name: format(currentDate, "MMM", { locale: fr }),
-            expenses: monthExpenses,
+            expenses: {
+              categorized: expensesByCategory.categorized,
+              uncategorized: expensesByCategory.uncategorized,
+            },
             obligatory: monthlyObligatory,
             recipes: monthRecipes,
-            balance: monthRecipes - totalExpenses,
+            obligatoryRecipes: monthlyObligatoryRecipes,
+            balance: totalRecipes - totalExpenses,
           };
         });
 
@@ -181,9 +220,16 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   });
 
   const maxAmount = Math.max(
-    ...chartData.map((item) =>
-      Math.max(item.recipes, item.expenses + item.obligatory)
-    ),
+    ...chartData.map((item) => {
+      const totalExpenses =
+        Object.values(item.expenses.categorized).reduce(
+          (sum, amount) => sum + amount,
+          0
+        ) +
+        item.expenses.uncategorized +
+        item.obligatory;
+      return Math.max(item.recipes, totalExpenses);
+    }),
     1
   );
   const yAxisTicks = Array.from({ length: 6 }, (_, i) =>
@@ -232,42 +278,148 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               />
               <Tooltip
                 formatter={(value: number, name: string) => {
-                  const label =
-                    name === "obligatory"
-                      ? "Dépenses obligatoires"
-                      : name === "expenses"
-                      ? "Dépenses variables"
-                      : name === "recipes"
-                      ? "Entrées d'argent"
-                      : "Balance";
-                  return [`${value}€`, label];
+                  if (name === "obligatory")
+                    return [`${value}€`, "Dépenses récurrentes"];
+                  if (name === "recipes")
+                    return [`${value}€`, "Entrées d'argent"];
+                  if (name === "uncategorized")
+                    return [`${value}€`, "Non catégorisées"];
+                  const category = categories.find((cat) => cat.id === name);
+                  return [`${value}€`, category?.name || name];
                 }}
                 cursor={{ fill: "transparent" }}
+                content={(props: TooltipProps) => {
+                  if (!props.active || !props.payload) return null;
+
+                  const formatName = (entry: PayloadEntry) => {
+                    const dataKey = entry.dataKey?.toString() || "";
+                    if (dataKey === "obligatory") return "Dépenses récurrentes";
+                    if (dataKey === "recipes") return "Entrées d'argent";
+                    if (dataKey === "expenses.uncategorized")
+                      return "Non catégorisées";
+                    if (dataKey === "obligatoryRecipes")
+                      return "Recettes récurrentes";
+                    const categoryId = dataKey.split(".")[2];
+                    const category = categories.find(
+                      (cat) => cat.id === categoryId
+                    );
+
+                    return category?.name || entry.name;
+                  };
+
+                  const totalExpenses = props.payload.reduce(
+                    (sum: number, entry: Payload<number, string>) => {
+                      if (
+                        entry.dataKey?.toString().includes("expenses") ||
+                        entry.dataKey === "obligatory"
+                      ) {
+                        return sum + (entry.value || 0);
+                      }
+                      return sum;
+                    },
+                    0
+                  );
+
+                  const totalRecipes = props.payload.reduce(
+                    (sum: number, entry: Payload<number, string>) => {
+                      if (
+                        entry.dataKey === "recipes" ||
+                        entry.dataKey === "obligatoryRecipes"
+                      ) {
+                        return sum + (entry.value || 0);
+                      }
+                      return sum;
+                    },
+                    0
+                  );
+
+                  const balance = totalRecipes - totalExpenses;
+
+                  return (
+                    <div className="bg-white p-2 border rounded-lg shadow-sm">
+                      {props.payload.map(
+                        (entry: PayloadEntry, index: number) => (
+                          <div
+                            key={index}
+                            className="text-xs flex items-center gap-2"
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span>
+                              {formatName(entry)}: {entry.value}€
+                            </span>
+                          </div>
+                        )
+                      )}
+                      <div className="border-t mt-1 pt-1 space-y-0.5 text-xs">
+                        <div className="font-semibold text-red-600">
+                          Total dépenses: {totalExpenses.toFixed(2)}€
+                        </div>
+                        <div className="font-semibold text-green-600">
+                          Total entrées: {totalRecipes.toFixed(2)}€
+                        </div>
+                        <div
+                          className={`font-bold ${
+                            balance >= 0 ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          Balance: {balance.toFixed(2)}€
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }}
               />
               <Legend
                 formatter={(value) => {
-                  return value === "obligatory"
-                    ? "Dépenses obligatoires"
-                    : value === "expenses"
-                    ? "Dépenses variables"
-                    : value === "recipes"
-                    ? "Entrées d'argent"
-                    : "Balance";
+                  if (value === "obligatory") return "Dépenses récurrentes";
+                  if (value === "recipes") return "Entrées d'argent";
+                  if (value === "uncategorized") return "Non catégorisées";
+                  if (value === "obligatoryRecipes")
+                    return "Recettes récurrentes";
+                  const category = categories.find((cat) => cat.id === value);
+                  return category?.name || value;
                 }}
+                wrapperStyle={{ fontSize: "10px" }}
+              />
+              {/* Dépenses par catégorie */}
+              {categories.map((category, index) => (
+                <Bar
+                  key={category.id}
+                  dataKey={`expenses.categorized.${category.id}`}
+                  name={category.name}
+                  stackId="expenses"
+                  fill={`hsl(${index * 30}, 70%, 50%)`}
+                  radius={[0, 0, 0, 0]}
+                />
+              ))}
+              <Bar
+                dataKey="expenses.uncategorized"
+                name="uncategorized"
+                stackId="expenses"
+                fill="#94a3b8"
+                radius={[0, 0, 0, 0]}
               />
               <Bar
                 dataKey="obligatory"
                 stackId="expenses"
                 fill="#fbbf24"
-                radius={[4, 4, 0, 0]}
+                radius={[0, 0, 0, 0]}
               />
               <Bar
-                dataKey="expenses"
-                stackId="expenses"
-                fill="#06b6d4"
+                dataKey="recipes"
+                stackId="recipes"
+                fill="#22c55e"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="obligatoryRecipes"
+                stackId="recipes"
+                fill="#16a34a"
                 radius={[4, 4, 0, 0]}
               />
-              <Bar dataKey="recipes" fill="#22c55e" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

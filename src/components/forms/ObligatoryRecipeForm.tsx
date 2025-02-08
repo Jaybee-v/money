@@ -1,6 +1,5 @@
 "use client";
-
-import { ObligatoryExpenseFormSchema } from "@/lib/definitions/expense.definition";
+import { ObligatoryRecipeFormSchema } from "@/lib/definitions/recipe.definition";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader } from "lucide-react";
 import { useState } from "react";
@@ -34,30 +33,28 @@ export const recurrenceOptions = [
   { value: "ANNUAL", label: "Tous les ans" },
 ] as const;
 
-interface ObligatoryExpenseFormProps {
+interface ObligatoryRecipeFormProps {
   userId: string;
-  onSubmit: (data: z.infer<typeof ObligatoryExpenseFormSchema>) => void;
+  onSubmit: (data: z.infer<typeof ObligatoryRecipeFormSchema>) => void;
 }
 
-export const ObligatoryExpenseForm = ({
+export const ObligatoryRecipeForm = ({
   userId,
   onSubmit: onSubmitProp,
-}: ObligatoryExpenseFormProps) => {
+}: ObligatoryRecipeFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const form = useForm<z.infer<typeof ObligatoryExpenseFormSchema>>({
-    resolver: zodResolver(ObligatoryExpenseFormSchema),
+  const form = useForm<z.infer<typeof ObligatoryRecipeFormSchema>>({
+    resolver: zodResolver(ObligatoryRecipeFormSchema),
     defaultValues: {
       name: "",
       amount: "",
       userId: userId,
-      startDate: "",
+      date: "",
       recurrence: "MONTHLY",
     },
   });
 
-  const onSubmit = async (
-    data: z.infer<typeof ObligatoryExpenseFormSchema>
-  ) => {
+  const onSubmit = async (data: z.infer<typeof ObligatoryRecipeFormSchema>) => {
     setIsLoading(true);
     console.log(data);
     onSubmitProp(data);
@@ -98,12 +95,12 @@ export const ObligatoryExpenseForm = ({
         />
         <FormField
           control={form.control}
-          name="startDate"
+          name="date"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date du prélèvement</FormLabel>
+              <FormLabel>Date de la rentrée</FormLabel>
               <FormDescription>
-                À quelle date ce prélèvement intervient-il ?
+                À quelle date cette recette intervient-elle ?
               </FormDescription>
               <FormControl>
                 <DatePicker
@@ -122,7 +119,7 @@ export const ObligatoryExpenseForm = ({
             <FormItem>
               <FormLabel>Fréquence</FormLabel>
               <FormDescription>
-                À quelle fréquence ce prélèvement est-il effectué ?
+                À quelle fréquence cette recette est-elle effectuée ?
               </FormDescription>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>

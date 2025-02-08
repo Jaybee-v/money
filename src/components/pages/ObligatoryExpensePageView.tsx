@@ -99,6 +99,10 @@ export const ObligatoryExpensePageView = ({
       <h1 className="text-2xl font-bold text-center">
         Gérez vos prélèvements récurrents
       </h1>
+      <p className="text-sm text-center text-muted-foreground">
+        Vous pouvez ajouter des dépenses récurrentes pour vous aider à gérer
+        votre budget.
+      </p>
       <section className="flex max-md:flex-col justify-evenly">
         <Card className="max-w-sm mx-auto">
           <CardHeader>

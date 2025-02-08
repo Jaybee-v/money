@@ -8,12 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Expense } from "@prisma/client";
+import { CategoryExpense, Expense } from "@prisma/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface ExpenseTableProps {
-  expenses: Expense[];
+  expenses: (Expense & { category: CategoryExpense | null })[];
 }
 
 export const ExpenseTable = ({ expenses }: ExpenseTableProps) => {
@@ -33,6 +33,7 @@ export const ExpenseTable = ({ expenses }: ExpenseTableProps) => {
           <TableRow>
             <TableHead>Date</TableHead>
             <TableHead>Dénomination</TableHead>
+            <TableHead>Catégorie</TableHead>
             <TableHead className="text-right">Montant (€)</TableHead>
           </TableRow>
         </TableHeader>
@@ -43,6 +44,9 @@ export const ExpenseTable = ({ expenses }: ExpenseTableProps) => {
                 {format(new Date(expense.date), "d MMMM yyyy", { locale: fr })}
               </TableCell>
               <TableCell>{expense.name}</TableCell>
+              <TableCell>
+                {expense.category?.name || "Non catégorisée"}
+              </TableCell>
               <TableCell className="text-right">{expense.amount} €</TableCell>
             </TableRow>
           ))}

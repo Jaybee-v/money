@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { SelectExpenseCategory } from "../elements/SelectExpenseCategory";
 import { Button } from "../ui/button";
 import { DatePicker } from "../ui/date-picker";
 import {
@@ -40,10 +41,13 @@ export const ExpenseForm = ({
       amount: "",
       date: "",
       userId: userId,
+      categoryId: "",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof ExpenseFormSchema>) => {
+    console.log(data);
+
     const response = await onSubmitForm(data);
     if (response.success) {
       setSuccess(response.success);
@@ -98,6 +102,23 @@ export const ExpenseForm = ({
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="categoryId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Catégorie</FormLabel>
+              <FormControl>
+                <SelectExpenseCategory
+                  userId={userId}
+                  selected={field.value ? field.value : null}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
         <section className="flex justify-end">
           <Button type="submit">Enregistrer</Button>
         </section>

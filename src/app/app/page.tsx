@@ -19,7 +19,7 @@ export default async function MainPage() {
         </h1>
       </section>
 
-      <section className="p-6">
+      <section className="md:p-6">
         <UpcomingObligatoryExpenses user={user} />
       </section>
       <ExpenseYearlyChart user={user} />

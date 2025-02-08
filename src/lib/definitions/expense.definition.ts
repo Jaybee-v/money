@@ -21,4 +21,5 @@ export const ExpenseFormSchema = z.object({
   amount: z.string().min(1, { message: "Le montant est requis" }),
   userId: z.string().min(1, { message: "L'utilisateur est requis" }),
   date: z.string().min(1, { message: "La date est requise" }),
+  categoryId: z.string().nullable(),
 });
