@@ -64,8 +64,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
 
   const isExpenseActiveForMonth = (
     item: ObligatoryExpense | ObligatoryRecipe,
-    currentDate: Date,
-    nextMonthDate: Date
+    currentDate: Date
   ) => {
     const today = new Date();
     const isRecipe = "date" in item;
@@ -142,7 +141,6 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
       ) {
         const monthlyData = Array.from({ length: 12 }, (_, month) => {
           const currentDate = new Date(selectedYear, month, 1);
-          const nextMonthDate = new Date(selectedYear, month + 1, 0);
 
           // Calculer les dépenses par catégorie
           const monthExpenses = expensesResponse.data.filter(
@@ -164,9 +162,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
 
           const monthlyObligatory =
             obligatoryResponse.obligatoryExpenses.reduce((sum, expense) => {
-              if (
-                isExpenseActiveForMonth(expense, currentDate, nextMonthDate)
-              ) {
+              if (isExpenseActiveForMonth(expense, currentDate)) {
                 return sum + expense.amount;
               }
               return sum;
@@ -175,9 +171,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
           const monthlyObligatoryRecipes =
             obligatoryRecipesResponse.obligatoryRecipes.reduce(
               (sum, recipe) => {
-                if (
-                  isExpenseActiveForMonth(recipe, currentDate, nextMonthDate)
-                ) {
+                if (isExpenseActiveForMonth(recipe, currentDate)) {
                   return sum + recipe.amount;
                 }
                 return sum;
@@ -285,7 +279,7 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               <Tooltip
                 formatter={(value: number, name: string) => {
                   if (name === "obligatory")
-                    return [`${value}€`, "Dépenses obligatoires"];
+                    return [`${value}€`, "Dépenses récurrentes"];
                   if (name === "recipes")
                     return [`${value}€`, "Entrées d'argent"];
                   if (name === "uncategorized")
@@ -326,6 +320,21 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
                     0
                   );
 
+                  const totalRecipes = props.payload.reduce(
+                    (sum: number, entry: Payload<number, string>) => {
+                      if (
+                        entry.dataKey === "recipes" ||
+                        entry.dataKey === "obligatoryRecipes"
+                      ) {
+                        return sum + (entry.value || 0);
+                      }
+                      return sum;
+                    },
+                    0
+                  );
+
+                  const balance = totalRecipes - totalExpenses;
+
                   return (
                     <div className="bg-white p-2 border rounded-lg shadow-sm">
                       {props.payload.map(
@@ -344,8 +353,20 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
                           </div>
                         )
                       )}
-                      <div className="border-t mt-1 pt-1 text-xs font-semibold">
-                        Total dépenses: {totalExpenses}€
+                      <div className="border-t mt-1 pt-1 space-y-0.5 text-xs">
+                        <div className="font-semibold text-red-600">
+                          Total dépenses: {totalExpenses.toFixed(2)}€
+                        </div>
+                        <div className="font-semibold text-green-600">
+                          Total entrées: {totalRecipes.toFixed(2)}€
+                        </div>
+                        <div
+                          className={`font-bold ${
+                            balance >= 0 ? "text-green-600" : "text-red-600"
+                          }`}
+                        >
+                          Balance: {balance.toFixed(2)}€
+                        </div>
                       </div>
                     </div>
                   );
@@ -353,9 +374,11 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               />
               <Legend
                 formatter={(value) => {
-                  if (value === "obligatory") return "Dépenses obligatoires";
+                  if (value === "obligatory") return "Dépenses récurrentes";
                   if (value === "recipes") return "Entrées d'argent";
                   if (value === "uncategorized") return "Non catégorisées";
+                  if (value === "obligatoryRecipes")
+                    return "Recettes récurrentes";
                   const category = categories.find((cat) => cat.id === value);
                   return category?.name || value;
                 }}

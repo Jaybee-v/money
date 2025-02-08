@@ -79,21 +79,25 @@ export const UpcomingObligatoryExpenses = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-2 md:gap-4">
           {expenses.length > 0 && (
             <section className="h-full">
               <h3 className="font-bold text-sm mb-2">Dépenses</h3>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {expenses.map((expense) => (
                   <li
                     key={expense.id}
                     className="flex justify-between items-center"
                   >
                     <div>
-                      <p className="font-medium text-sm">{expense.name}</p>
+                      <p className="font-medium text-xs md:text-sm">
+                        {expense.name}
+                      </p>
                       <p className="text-xs text-gray-400">
-                        Prévu le {format(new Date(expense.startDate), "d")} du
-                        mois
+                        Prévu le {format(new Date(expense.startDate), "d")}{" "}
+                        <span className="hidden md:inline">
+                          du mois prochain
+                        </span>
                       </p>
                     </div>
                     <span className="font-bold text-sm text-red-600">
@@ -108,16 +112,21 @@ export const UpcomingObligatoryExpenses = ({
           {recipes.length > 0 && (
             <section className="h-full">
               <h3 className="font-bold text-sm mb-2">Entrées</h3>
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {recipes.map((recipe) => (
                   <li
                     key={recipe.id}
                     className="flex justify-between items-center"
                   >
                     <div>
-                      <p className="font-medium text-sm">{recipe.name}</p>
+                      <p className="font-medium text-xs md:text-sm">
+                        {recipe.name}
+                      </p>
                       <p className="text-xs text-gray-400">
-                        Prévu le {format(new Date(recipe.date), "d")} du mois
+                        Prévu le {format(new Date(recipe.date), "d")}{" "}
+                        <span className="hidden md:inline">
+                          du mois prochain
+                        </span>
                       </p>
                     </div>
                     <span className="font-bold text-sm text-green-600">

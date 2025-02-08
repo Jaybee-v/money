@@ -11,7 +11,7 @@ export default async function ProfilePage() {
   return (
     <div>
       <h1>Mes paramètres</h1>
-      <section className="flex gap-4">
+      <section className="flex max-md:flex-col gap-4">
         <UpdateProfileCard user={user} />
         <UpdatePasswordCard user={user} />
       </section>
