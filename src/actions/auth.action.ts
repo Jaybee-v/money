@@ -1,6 +1,7 @@
 "use server";
 import { CreateUserDto } from "@/lib/dtos/CreateUSerDto";
 import { SigninDto } from "@/lib/dtos/SigninDto";
+import { UpdateProfileDto } from "@/lib/dtos/UpdateProfileDto";
 import { compare, hash } from "@/lib/hash";
 import prisma from "@/lib/prisma";
 import { createSession } from "@/lib/session";
@@ -41,4 +42,22 @@ export const signin = async (signinDto: SigninDto) => {
   }
 
   await createSession(user.id);
+};
+
+export const updateProfile = async (updateProfileDto: UpdateProfileDto) => {
+  const user = await prisma.user.update({
+    where: {
+      id: updateProfileDto.id,
+    },
+    data: {
+      name: updateProfileDto.name,
+      email: updateProfileDto.email,
+    },
+  });
+
+  if (!user) {
+    return { error: "User not found" };
+  }
+
+  return { success: "User updated" };
 };

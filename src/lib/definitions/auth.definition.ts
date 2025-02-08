@@ -25,6 +25,11 @@ export const SigninFormSchema = z.object({
   password: z.string(),
 });
 
+export const UpdateProfileFormSchema = z.object({
+  name: z.string().min(1, { message: "Votre prénom est requis" }),
+  email: z.string().email({ message: "Une adresse email valide est requise" }),
+});
+
 export interface SessionPayload extends JWTPayload {
   userId: string;
   expiresAt: Date;
