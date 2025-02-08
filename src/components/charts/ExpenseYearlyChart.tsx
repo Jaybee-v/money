@@ -5,8 +5,9 @@ import {
   getExpensesByYear,
 } from "@/actions/expense.action";
 import { getObligatoryExpenses } from "@/actions/obligatoryExpense.action";
+import { getObligatoryRecipes } from "@/actions/obligatoryRecipe.action";
 import { getRecipesByYear } from "@/actions/recipe.action";
-import { ObligatoryExpense, User } from "@prisma/client";
+import { ObligatoryExpense, ObligatoryRecipe, User } from "@prisma/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEffect, useState } from "react";
@@ -42,6 +43,7 @@ interface MonthlyData {
   };
   obligatory: number;
   recipes: number;
+  obligatoryRecipes: number;
   balance: number;
 }
 
@@ -61,76 +63,51 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
   const isExpenseActiveForMonth = (
-    expense: ObligatoryExpense,
+    item: ObligatoryExpense | ObligatoryRecipe,
     currentDate: Date,
     nextMonthDate: Date
   ) => {
-    const startDate = new Date(expense.startDate);
     const today = new Date();
+    const isRecipe = "date" in item;
+    const itemDate = new Date(isRecipe ? item.date : item.startDate);
+    const itemMonth = new Date(itemDate.getFullYear(), itemDate.getMonth(), 1);
 
-    // Si la date de début n'est pas encore atteinte
-    if (startDate > nextMonthDate) {
-      return false;
-    }
-
-    // Si la dépense est archivée et que nous sommes après la date d'archivage
+    // Si l'item est archivé
     if (
-      expense.isArchived &&
-      expense.archivedAt &&
-      currentDate >= new Date(expense.archivedAt)
+      item.isArchived &&
+      item.archivedAt &&
+      currentDate >= new Date(item.archivedAt)
     ) {
       return false;
     }
 
-    // Calculer le nombre de mois depuis le début
-    const monthsSinceStart =
-      (currentDate.getFullYear() - startDate.getFullYear()) * 12 +
-      (currentDate.getMonth() - startDate.getMonth());
+    // Ne pas afficher si le mois est avant la date de début ou après le mois en cours
+    if (
+      currentDate < itemMonth ||
+      currentDate > new Date(today.getFullYear(), today.getMonth(), 1)
+    ) {
+      return false;
+    }
 
-    // Si on est dans le même mois et la même année
+    const monthsSinceStart =
+      (currentDate.getFullYear() - itemDate.getFullYear()) * 12 +
+      (currentDate.getMonth() - itemDate.getMonth());
+
+    // Si on est dans le mois en cours
     if (
       currentDate.getMonth() === today.getMonth() &&
       currentDate.getFullYear() === today.getFullYear()
     ) {
-      // Vérifier si on a dépassé le jour du prélèvement ET si la récurrence correspond
-      if (today.getDate() >= startDate.getDate()) {
-        switch (expense.recurrence) {
-          case "MONTHLY":
-            return true;
-          case "BIMONTHLY":
-            return monthsSinceStart % 2 === 0;
-          case "QUARTERLY":
-            return monthsSinceStart % 3 === 0;
-          case "BIANNUAL":
-            return monthsSinceStart % 6 === 0;
-          case "ANNUAL":
-            return monthsSinceStart % 12 === 0;
-          default:
-            return false;
-        }
-      }
-      return false;
+      if (today.getDate() < itemDate.getDate()) return false;
     }
 
-    // Pour les mois passés, afficher si le mois correspond à la récurrence
-    if (currentDate < today) {
-      switch (expense.recurrence) {
-        case "MONTHLY":
-          return true;
-        case "BIMONTHLY":
-          return monthsSinceStart % 2 === 0;
-        case "QUARTERLY":
-          return monthsSinceStart % 3 === 0;
-        case "BIANNUAL":
-          return monthsSinceStart % 6 === 0;
-        case "ANNUAL":
-          return monthsSinceStart % 12 === 0;
-        default:
-          return false;
-      }
-    }
-
-    return false;
+    return (
+      item.recurrence === "MONTHLY" ||
+      (item.recurrence === "BIMONTHLY" && monthsSinceStart % 2 === 0) ||
+      (item.recurrence === "QUARTERLY" && monthsSinceStart % 3 === 0) ||
+      (item.recurrence === "BIANNUAL" && monthsSinceStart % 6 === 0) ||
+      (item.recurrence === "ANNUAL" && monthsSinceStart % 12 === 0)
+    );
   };
 
   useEffect(() => {
@@ -145,21 +122,23 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
 
   useEffect(() => {
     const fetchData = async () => {
-      const expensesResponse = await getExpensesByYear({
-        userId: user.id,
-        year: selectedYear,
-      });
-
-      const obligatoryResponse = await getObligatoryExpenses(user.id);
-      const recipesResponse = await getRecipesByYear({
-        userId: user.id,
-        year: selectedYear,
-      });
+      const [
+        expensesResponse,
+        obligatoryResponse,
+        recipesResponse,
+        obligatoryRecipesResponse,
+      ] = await Promise.all([
+        getExpensesByYear({ userId: user.id, year: selectedYear }),
+        getObligatoryExpenses(user.id),
+        getRecipesByYear({ userId: user.id, year: selectedYear }),
+        getObligatoryRecipes(user.id),
+      ]);
 
       if (
         expensesResponse.data &&
         obligatoryResponse.obligatoryExpenses &&
-        recipesResponse.data
+        recipesResponse.data &&
+        obligatoryRecipesResponse.obligatoryRecipes
       ) {
         const monthlyData = Array.from({ length: 12 }, (_, month) => {
           const currentDate = new Date(selectedYear, month, 1);
@@ -193,6 +172,19 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               return sum;
             }, 0);
 
+          const monthlyObligatoryRecipes =
+            obligatoryRecipesResponse.obligatoryRecipes.reduce(
+              (sum, recipe) => {
+                if (
+                  isExpenseActiveForMonth(recipe, currentDate, nextMonthDate)
+                ) {
+                  return sum + recipe.amount;
+                }
+                return sum;
+              },
+              0
+            );
+
           const monthRecipes =
             recipesResponse.data.find((item) => item.month === month)?.total ||
             0;
@@ -203,6 +195,8 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
               0
             ) + monthlyObligatory;
 
+          const totalRecipes = monthRecipes + monthlyObligatoryRecipes;
+
           return {
             name: format(currentDate, "MMM", { locale: fr }),
             expenses: {
@@ -211,7 +205,8 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
             },
             obligatory: monthlyObligatory,
             recipes: monthRecipes,
-            balance: monthRecipes - totalExpenses,
+            obligatoryRecipes: monthlyObligatoryRecipes,
+            balance: totalRecipes - totalExpenses,
           };
         });
 
@@ -304,15 +299,17 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
 
                   const formatName = (entry: PayloadEntry) => {
                     const dataKey = entry.dataKey?.toString() || "";
-                    if (dataKey === "obligatory")
-                      return "Dépenses obligatoires";
+                    if (dataKey === "obligatory") return "Dépenses récurrentes";
                     if (dataKey === "recipes") return "Entrées d'argent";
                     if (dataKey === "expenses.uncategorized")
                       return "Non catégorisées";
+                    if (dataKey === "obligatoryRecipes")
+                      return "Recettes récurrentes";
                     const categoryId = dataKey.split(".")[2];
                     const category = categories.find(
                       (cat) => cat.id === categoryId
                     );
+
                     return category?.name || entry.name;
                   };
 
@@ -388,7 +385,18 @@ export function ExpenseYearlyChart({ user }: ExpenseYearlyChartProps) {
                 fill="#fbbf24"
                 radius={[0, 0, 0, 0]}
               />
-              <Bar dataKey="recipes" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="recipes"
+                stackId="recipes"
+                fill="#22c55e"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="obligatoryRecipes"
+                stackId="recipes"
+                fill="#16a34a"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

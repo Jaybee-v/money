@@ -23,7 +23,7 @@ export const UpdateProfileCard = ({
   const [user, setUser] = useState<User>(receivedUser);
 
   return (
-    <Card className="max-w-sm">
+    <Card className="max-w-sm h-fit">
       <CardHeader>
         <CardTitle>Mes informations</CardTitle>
       </CardHeader>

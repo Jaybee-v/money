@@ -1,3 +1,4 @@
+import { UpdatePasswordCard } from "@/components/elements/UpdatePasswordCard";
 import { UpdateProfileCard } from "@/components/elements/UpdateProfileCard";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
@@ -10,7 +11,10 @@ export default async function ProfilePage() {
   return (
     <div>
       <h1>Mes paramètres</h1>
-      <UpdateProfileCard user={user} />
+      <section className="flex gap-4">
+        <UpdateProfileCard user={user} />
+        <UpdatePasswordCard user={user} />
+      </section>
     </div>
   );
 }

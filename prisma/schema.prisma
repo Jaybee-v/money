@@ -32,13 +32,14 @@ model User {
 
   obligatoryExpenses ObligatoryExpense[]
   expenses         Expense[]
+  obligatoryExpenseRecipes ObligatoryRecipe[]
 }
 
 model ObligatoryExpense {
   id          String         @id @default(cuid())
   userId      String
   name        String
-  amount      Int
+  amount      Float
   isArchived  Boolean       @default(false)
   archivedAt  DateTime?
   createdAt   DateTime      @default(now())
@@ -52,11 +53,27 @@ model ObligatoryExpense {
   @@map("obligatory_expenses")
 }
 
+model ObligatoryRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  amount    Float
+  date      DateTime
+  isArchived  Boolean       @default(false)
+  archivedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  recurrence  RecurrenceType @default(MONTHLY)
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@map("obligatory_recipes")
+}
+
 model Expense {
   id        String   @id @default(cuid())
   userId    String
   name      String
-  amount    Int
+  amount    Float
   categoryId String?
   category CategoryExpense? @relation(fields: [categoryId], references: [id])
   date      DateTime
@@ -70,7 +87,7 @@ model Recipe {
   id        String   @id @default(cuid())
   userId    String
   name      String
-  amount    Int
+  amount    Float
   date      DateTime
   categoryId String?
   category CategoryRecipe? @relation(fields: [categoryId], references: [id])

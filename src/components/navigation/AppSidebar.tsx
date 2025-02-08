@@ -10,7 +10,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Banknote, Coins, CreditCard, HomeIcon, Settings } from "lucide-react";
+import {
+  Coins,
+  CreditCard,
+  HomeIcon,
+  Settings,
+  TicketMinus,
+  TicketPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { LogoutButton } from "./LogoutButton";
 
@@ -22,17 +29,22 @@ const items = [
   },
   {
     title: "Mes prélévements récurrents",
-    icon: <Coins />,
+    icon: <TicketMinus />,
     href: "/app/obligatory-expenses",
   },
   {
+    title: "Mes recettes récurrentes",
+    icon: <TicketPlus />,
+    href: "/app/obligatory-recipes",
+  },
+  {
     title: "Mes dépenses",
-    icon: <CreditCard />,
+    icon: <Coins />,
     href: "/app/expenses",
   },
   {
     title: "Mes rentrées",
-    icon: <Banknote />,
+    icon: <CreditCard />,
     href: "/app/recipes",
   },
 ];
