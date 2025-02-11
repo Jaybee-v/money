@@ -1,6 +1,7 @@
 "use server";
 
 import { CreateObligatoryRecipeDto } from "@/lib/dtos/CreateObligatoryRecipeDto";
+import { UpdateObligatoryRecipeDto } from "@/lib/dtos/UpdateObligatoryRecipeDto";
 import prisma from "@/lib/prisma";
 
 export const createObligatoryRecipe = async (
@@ -30,6 +31,26 @@ export const getObligatoryRecipes = async (userId: string) => {
 
   return {
     obligatoryRecipes: _obligatoryRecipes,
+  };
+};
+
+export const updateObligatoryRecipe = async (
+  recipe: UpdateObligatoryRecipeDto
+) => {
+  const _recipe = await prisma.obligatoryRecipe.update({
+    where: { id: recipe.id },
+    data: recipe,
+  });
+
+  if (!_recipe) {
+    return {
+      error: "Erreur lors de la mise à jour de la recette obligatoire",
+    };
+  }
+
+  return {
+    success: "Recette obligatoire mise à jour avec succès",
+    data: _recipe,
   };
 };
 

@@ -114,6 +114,7 @@ export const ObligatoryRecipesPageView = ({
               obligatoryRecipes={obligatoryRecipes}
               onDelete={onDelete}
               onArchive={onArchive}
+              user={user}
             />
           ) : (
             <p className="text-center text-sm text-muted-foreground my-12">

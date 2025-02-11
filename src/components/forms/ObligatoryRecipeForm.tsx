@@ -1,6 +1,7 @@
 "use client";
 import { ObligatoryRecipeFormSchema } from "@/lib/definitions/recipe.definition";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ObligatoryRecipe } from "@prisma/client";
 import { Loader } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -36,27 +37,28 @@ export const recurrenceOptions = [
 interface ObligatoryRecipeFormProps {
   userId: string;
   onSubmit: (data: z.infer<typeof ObligatoryRecipeFormSchema>) => void;
+  obligatoryRecipe?: ObligatoryRecipe;
 }
 
 export const ObligatoryRecipeForm = ({
   userId,
   onSubmit: onSubmitProp,
+  obligatoryRecipe,
 }: ObligatoryRecipeFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const form = useForm<z.infer<typeof ObligatoryRecipeFormSchema>>({
     resolver: zodResolver(ObligatoryRecipeFormSchema),
     defaultValues: {
-      name: "",
-      amount: "",
+      name: obligatoryRecipe?.name || "",
+      amount: obligatoryRecipe?.amount.toString() || "",
       userId: userId,
-      date: "",
-      recurrence: "MONTHLY",
+      date: obligatoryRecipe?.date.toISOString().split("T")[0] || "",
+      recurrence: obligatoryRecipe?.recurrence || "MONTHLY",
     },
   });
 
   const onSubmit = async (data: z.infer<typeof ObligatoryRecipeFormSchema>) => {
     setIsLoading(true);
-    console.log(data);
     onSubmitProp(data);
     form.reset();
     setIsLoading(false);
