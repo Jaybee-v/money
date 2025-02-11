@@ -3,6 +3,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExpenseFormSchema } from "@/lib/definitions/expense.definition";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CategoryExpense, Expense } from "@prisma/client";
 import { Info } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -26,22 +27,24 @@ interface ExpenseFormProps {
     success?: string;
     error?: string;
   }>;
+  expense?: Expense & { category: CategoryExpense | null };
 }
 
 export const ExpenseForm = ({
   userId,
   onSubmit: onSubmitForm,
+  expense,
 }: ExpenseFormProps) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const form = useForm<z.infer<typeof ExpenseFormSchema>>({
     resolver: zodResolver(ExpenseFormSchema),
     defaultValues: {
-      name: "",
-      amount: "",
-      date: "",
+      name: expense?.name || "",
+      amount: expense?.amount.toString() || "",
+      date: expense?.date.toISOString().split("T")[0] || "",
       userId: userId,
-      categoryId: "",
+      categoryId: expense?.categoryId || "",
     },
   });
 

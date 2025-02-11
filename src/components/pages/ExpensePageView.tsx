@@ -152,7 +152,7 @@ export const ExpensePageView = ({ user }: ExpensePageViewProps) => {
       </section>
 
       {expenses.length > 0 ? (
-        <ExpenseTable expenses={expenses} />
+        <ExpenseTable expenses={expenses} user={user} />
       ) : (
         <p className="text-center text-muted-foreground">
           Aucune dépense pour ce mois

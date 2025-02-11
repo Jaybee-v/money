@@ -2,6 +2,7 @@
 
 import { CreateCategoryExpenseDto } from "@/lib/dtos/CreateCategoryExpenseDto";
 import { CreateExpenseDto } from "@/lib/dtos/CreateExpenseDto";
+import { UpdateExpenseDto } from "@/lib/dtos/UpdateExpenseDto";
 import prisma from "@/lib/prisma";
 
 export const createExpense = async (expense: CreateExpenseDto) => {
@@ -137,5 +138,28 @@ export const createCategoryExpense = async (
   return {
     success: "Catégorie créée avec succès",
     data: _category,
+  };
+};
+
+export const updateExpense = async (expense: UpdateExpenseDto) => {
+  const _expense = await prisma.expense.update({
+    where: {
+      id: expense.id,
+    },
+    data: expense,
+    include: {
+      category: true,
+    },
+  });
+
+  if (!_expense) {
+    return {
+      error: "Erreur lors de la mise à jour de la dépense",
+    };
+  }
+
+  return {
+    success: "Dépense mise à jour avec succès",
+    data: _expense,
   };
 };
