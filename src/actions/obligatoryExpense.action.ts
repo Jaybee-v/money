@@ -1,6 +1,7 @@
 "use server";
 
 import { CreateObligatoryExpenseDto } from "@/lib/dtos/CreateObligatoryExpenseDto";
+import { UpdateObligatoryExpenseDto } from "@/lib/dtos/UpdateObligatoryExpenseDto";
 import prisma from "@/lib/prisma";
 
 export const createObligatoryExpense = async (
@@ -32,6 +33,26 @@ export const getObligatoryExpenses = async (userId: string) => {
   }
 
   return { obligatoryExpenses: _obligatoryExpenses };
+};
+
+export const updateObligatoryExpense = async (
+  expense: UpdateObligatoryExpenseDto
+) => {
+  const _expense = await prisma.obligatoryExpense.update({
+    where: { id: expense.id },
+    data: expense,
+  });
+
+  if (!_expense) {
+    return {
+      error: "Erreur lors de la modification du prélèvement obligatoire",
+    };
+  }
+
+  return {
+    success: "Prélèvement obligatoire modifié avec succès",
+    data: _expense,
+  };
 };
 
 export const archiveObligatoryExpense = async (expenseId: string) => {

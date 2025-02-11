@@ -103,7 +103,7 @@ export const ObligatoryExpensePageView = ({
         Vous pouvez ajouter des dépenses récurrentes pour vous aider à gérer
         votre budget.
       </p>
-      <section className="flex max-md:flex-col justify-evenly">
+      <section className="flex max-lg:flex-col justify-evenly">
         <Card className="max-w-sm mx-auto">
           <CardHeader>
             <CardTitle>Ajouter un prélèvement récurrent</CardTitle>
@@ -118,6 +118,7 @@ export const ObligatoryExpensePageView = ({
               obligatoryExpenses={obligatoryExpenses}
               onDelete={onDelete}
               onArchive={onArchive}
+              user={user}
             />
           ) : (
             <p className="text-center text-sm text-muted-foreground my-12">

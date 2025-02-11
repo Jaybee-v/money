@@ -2,6 +2,7 @@
 
 import { ObligatoryExpenseFormSchema } from "@/lib/definitions/expense.definition";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ObligatoryExpense } from "@prisma/client";
 import { Loader } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -37,21 +38,24 @@ export const recurrenceOptions = [
 interface ObligatoryExpenseFormProps {
   userId: string;
   onSubmit: (data: z.infer<typeof ObligatoryExpenseFormSchema>) => void;
+  obligatoryExpense?: ObligatoryExpense;
 }
 
 export const ObligatoryExpenseForm = ({
   userId,
   onSubmit: onSubmitProp,
+  obligatoryExpense,
 }: ObligatoryExpenseFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const form = useForm<z.infer<typeof ObligatoryExpenseFormSchema>>({
     resolver: zodResolver(ObligatoryExpenseFormSchema),
     defaultValues: {
-      name: "",
-      amount: "",
+      name: obligatoryExpense?.name || "",
+      amount: obligatoryExpense?.amount.toString() || "",
       userId: userId,
-      startDate: "",
-      recurrence: "MONTHLY",
+      startDate:
+        obligatoryExpense?.startDate?.toISOString().split("T")[0] || "",
+      recurrence: obligatoryExpense?.recurrence || "MONTHLY",
     },
   });
 
@@ -59,7 +63,6 @@ export const ObligatoryExpenseForm = ({
     data: z.infer<typeof ObligatoryExpenseFormSchema>
   ) => {
     setIsLoading(true);
-    console.log(data);
     onSubmitProp(data);
     form.reset();
     setIsLoading(false);
@@ -144,7 +147,13 @@ export const ObligatoryExpenseForm = ({
         />
         <section className="flex justify-end">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? <Loader className="animate-spin" /> : "Ajouter"}
+            {isLoading ? (
+              <Loader className="animate-spin" />
+            ) : obligatoryExpense ? (
+              "Modifier"
+            ) : (
+              "Ajouter"
+            )}
           </Button>
         </section>
       </form>
